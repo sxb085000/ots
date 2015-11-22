@@ -4,6 +4,8 @@ import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_AUTH_PASS;
 import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_CID;
 import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT;
 import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT_AUTH;
+import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_TRANSACTION;
+import static edu.utd.db.ots.constant.OtsDBConstant.TRANSACTION_XID;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,19 +25,22 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import edu.utd.db.ots.domain.AuthInfo;
+import edu.utd.db.ots.domain.Payment;
+import edu.utd.db.ots.domain.Transaction;
 import edu.utd.db.ots.domain.User;
-import edu.utd.db.ots.rowmapper.UserRowMapper;
+
 
 @Repository
-public class UserDao {
+public class TransactionDao {
 	
 	/**
 	 * queries to prepare
 	 */
-	public static final String QUERY_ADD_USER = "INSERT INTO " + TABLE_CLIENT + 
-			" (First_name, Last_name, Street_addr, City, State, Zip, Email, Cell_number, Ph_number) VALUES "
+	public static final String QUERY_CREATE_TRXN = "INSERT INTO " + TABLE_TRANSACTION + 
+			" (Cid, Oil_amt, Oil_owed, Trans_date, Cach_owed, Trader_id, Oil_paid, Cach_paid, Status) VALUES "
 			+ "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	public static final String QUERY_ADD_USER_AUTH = "INSERT INTO " + TABLE_CLIENT_AUTH + "(" + CLIENT_CID + "," + CLIENT_AUTH_PASS + ") VALUES (?, ?)";
+	public static final String QUERY_UPDATE_TRXN_PAYMENT = "UPDATE " + TABLE_TRANSACTION
+			+ "SET Cash_paid += ? WHERE Trans_id = ?";
 	public static final String QUERY_SELECT_USER_BY_ID = "SELECT * FROM " + TABLE_CLIENT + " WHERE " + CLIENT_CID + " = ?";
 	public static final String QUERY_UPDATE_USER = 
 			"UDPATE user SET First_name = ?, Last_name = ?, Street_addr = ?, City = ?, State = ?, Zip = ?, Email = ?, Cell_number = ?, Ph_number = ? WHERE Cid = ?";
@@ -48,7 +53,7 @@ public class UserDao {
 	}
 
 	@Transactional
-	public User addUser(final User user) {
+	public Transaction submitTransaction(final Transaction trxn) {
 
 		// add users to client table first
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -56,17 +61,17 @@ public class UserDao {
 				new PreparedStatementCreator() {
 					@Override
 					public PreparedStatement createPreparedStatement(Connection conn) throws SQLException {
-						PreparedStatement pstmt = conn.prepareStatement(QUERY_ADD_USER, new String[]{CLIENT_CID});
+						PreparedStatement pstmt = conn.prepareStatement(QUERY_CREATE_TRXN, new String[]{TRANSACTION_XID});
 						
-						pstmt.setString(1, user.getFname());
-						pstmt.setString(2, user.getLname());
-						pstmt.setString(3, user.getStreetAddr());
-						pstmt.setString(4, user.getCity());
-						pstmt.setString(5, user.getState());
-						pstmt.setInt(6, user.getZip());
-						pstmt.setString(7, user.getEmail());
-						pstmt.setString(8, user.getCellNum());
-						pstmt.setString(9, user.getPhoneNum());
+						pstmt.setInt(1, trxn.getCid());
+						pstmt.setDouble(2, trxn.getOilAmt());
+						pstmt.setDouble(3, trxn.getOilOwed());
+						pstmt.setDate(4, trxn.getTransDate());
+						pstmt.setDouble(5, trxn.getCachOwed());
+						pstmt.setInt(6, trxn.getTraderId());
+						pstmt.setDouble(7, trxn.getCachePaid());
+						pstmt.setDouble(8, trxn.getOilPaid());
+						pstmt.setString(9, trxn.getStatus());
 						
 						return pstmt;
 					}
@@ -74,34 +79,27 @@ public class UserDao {
 				keyHolder
 				);
 		
-		final int cid = keyHolder.getKey().intValue();
-		user.setCid(cid);
+		final int transId = keyHolder.getKey().intValue();
+		trxn.setTransId(transId);
 		
-		// add user to auth
-		jdbcTemplate.update(
-				new PreparedStatementCreator() {
-					@Override
-					public PreparedStatement createPreparedStatement(Connection conn) throws SQLException {
-						PreparedStatement pstmt = conn.prepareStatement(QUERY_ADD_USER_AUTH);
-						
-						pstmt.setInt(1, cid);
-						pstmt.setString(2, user.encryptedPass());
-						
-						return pstmt;
-					}
-				});
+		// if oil paid is given
 		
-		
-		return user;
+		return trxn;
 	}
 	
-	public User getUserById(int cid) {
-		return jdbcTemplate.query(QUERY_SELECT_USER_BY_ID, new Integer[]{cid}, new ResultSetExtractor<User>() {
-			@Override
-			public User extractData(ResultSet rs) throws SQLException, DataAccessException {
-				return rs.next() ? new UserRowMapper().mapRow(rs, 1) : null;
-			}
-		});
+	/**
+	 * used only for cash payment
+	 * @param trxnId
+	 * @param payment
+	 * @return
+	 */
+	public boolean payTransaction(int trxnId, Payment payment) {
+		boolean success = false;
+		
+		int numUpdated = jdbcTemplate.update(QUERY_UPDATE_TRXN_PAYMENT, payment.getCachPaid(), trxnId);
+		success = numUpdated > 0;
+		
+		return success;
 	}
 
 	public User updateUser(int cid, User user) {
