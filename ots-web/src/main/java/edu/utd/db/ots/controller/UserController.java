@@ -5,9 +5,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import edu.utd.db.ots.dao.TransactionDao;
 import edu.utd.db.ots.dao.UserDao;
 import edu.utd.db.ots.domain.AuthInfo;
 import edu.utd.db.ots.domain.RestfulResult;
@@ -19,6 +21,9 @@ public class UserController {
 	
 	@Autowired
 	private UserDao userDao;
+	
+	@Autowired
+	private TransactionDao transactionDao;
 	
 	@RequestMapping(value = "/register", method = RequestMethod.POST)
 	public @ResponseBody RestfulResult register(@RequestBody User user) {
@@ -65,6 +70,29 @@ public class UserController {
 		
 		try {
 			result.success(userDao.login(authInfo));
+		} catch (Exception e) {
+			result.error(e.getMessage());
+		}
+		
+		return result;
+	}
+	
+	@RequestMapping(value = "search", method = RequestMethod.GET)
+	public @ResponseBody RestfulResult searchForUsers(@RequestParam(name = "fn") String firstName, @RequestParam(name = "ln") String lastName,
+			@RequestParam(name = "addr") String address, @RequestParam(name = "phone") String phoneNumber) {
+		RestfulResult result = new RestfulResult();
+		
+		//TODO: implement this
+		
+		return result;
+	}
+	
+	@RequestMapping(value = "{cid}/trxns", method = RequestMethod.GET)
+	public @ResponseBody RestfulResult searchTransactions(@PathVariable(value = "cid") int cid) {
+		RestfulResult result = new RestfulResult();
+		
+		try {
+			result.success(transactionDao.searchByUser(cid));
 		} catch (Exception e) {
 			result.error(e.getMessage());
 		}

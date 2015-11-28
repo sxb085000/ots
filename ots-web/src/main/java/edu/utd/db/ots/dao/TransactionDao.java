@@ -1,16 +1,16 @@
 package edu.utd.db.ots.dao;
 
-import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_AUTH_PASS;
-import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_CID;
-import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT;
-import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT_AUTH;
-import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_TRANSACTION;
-import static edu.utd.db.ots.constant.OtsDBConstant.TRANSACTION_XID;
+import static edu.utd.db.ots.constant.OTSDBConstants.CLIENT_CID;
+import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_CLIENT;
+import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_TRANSACTION;
+import static edu.utd.db.ots.constant.OTSDBConstants.TRANSACTION_XID;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -24,10 +24,13 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import edu.utd.db.ots.domain.AuthInfo;
+import edu.utd.db.ots.domain.ClientLevel;
 import edu.utd.db.ots.domain.Payment;
 import edu.utd.db.ots.domain.Transaction;
+import edu.utd.db.ots.domain.TrxnStatus;
 import edu.utd.db.ots.domain.User;
+import edu.utd.db.ots.rowmapper.TransactionRowMapper;
+import edu.utd.db.ots.rowmapper.UserRowMapper;
 
 
 @Repository
@@ -41,10 +44,12 @@ public class TransactionDao {
 			+ "(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	public static final String QUERY_UPDATE_TRXN_PAYMENT = "UPDATE " + TABLE_TRANSACTION
 			+ "SET Cash_paid += ? WHERE Trans_id = ?";
-	public static final String QUERY_SELECT_USER_BY_ID = "SELECT * FROM " + TABLE_CLIENT + " WHERE " + CLIENT_CID + " = ?";
-	public static final String QUERY_UPDATE_USER = 
-			"UDPATE user SET First_name = ?, Last_name = ?, Street_addr = ?, City = ?, State = ?, Zip = ?, Email = ?, Cell_number = ?, Ph_number = ? WHERE Cid = ?";
-	public static final String QUERY_AUTHENTICATE = "SELECT * FROM " + TABLE_CLIENT_AUTH + " WHERE " + CLIENT_CID + " = ? AND " + CLIENT_AUTH_PASS + " = ?";
+	public static final String QUERY_UPDATE_TRXN_STATUS = "UPDATE " + TABLE_TRANSACTION
+			+ "SET Status = ? WHERE Trans_id = ?";
+	public static final String QUERY_INVALIDATE_CLIENT_LEVEL = "UPDATE " + TABLE_CLIENT + " SET LEVEL = '" + ClientLevel.GOLD + "' "
+			+ " WHERE " + CLIENT_CID + " IN (SELECT " + CLIENT_CID + " FROM " + TABLE_TRANSACTION + " WHERE Status = '" + TrxnStatus.APPROVED + "' "
+					+ "GROUP BY " + CLIENT_CID + ", MONTH(Trans_date) HAVING SUM(Oil_amt) > 30) AND Level = '" + ClientLevel.SILVER + "'";
+	public static final String QUERY_SELECT_TRANSACTION_BY_CLIENT_NAME = "SELECT * FROM " + TABLE_TRANSACTION + " WHERE " + CLIENT_CID + " = ?";
 	
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
@@ -82,8 +87,6 @@ public class TransactionDao {
 		final int transId = keyHolder.getKey().intValue();
 		trxn.setTransId(transId);
 		
-		// if oil paid is given
-		
 		return trxn;
 	}
 	
@@ -102,40 +105,27 @@ public class TransactionDao {
 		return success;
 	}
 
-	public User updateUser(int cid, User user) {
-		
-		jdbcTemplate.update(QUERY_UPDATE_USER, 
-				user.getFname(), 
-				user.getLname(), 
-				user.getStreetAddr(), 
-				user.getCity(), 
-				user.getState(), 
-				user.getZip(), 
-				user.getEmail(),
-				user.getCellNum(),
-				user.getPhoneNum(),
-				cid);
-		
-		user.setCid(cid);
-		return user;
-	}
 	
-	public boolean login(AuthInfo authInfo) {
+	@Transactional
+	public boolean updateStatus(int trxnId, TrxnStatus status) {
 		boolean success = false;
 		
-		Integer cid = jdbcTemplate.query(QUERY_AUTHENTICATE, new Object[]{authInfo.getCid(), authInfo.encryptedPass()}, new ResultSetExtractor<Integer>() {
-
-			@Override
-			public Integer extractData(ResultSet rs) throws SQLException, DataAccessException {
-				return rs.next() ? rs.getInt(1) : null;
-			}
-		});
+		// update transaction to the status given
+		int numUpdated = jdbcTemplate.update(QUERY_UPDATE_TRXN_PAYMENT, status.toString(), trxnId);
 		
-		if(cid != null && cid.intValue() == authInfo.getCid()) {
-			success = true;
+		
+		// invalidate customer status
+		if (numUpdated > 0 && TrxnStatus.APPROVED == status) {
+			// if yes, update customer rating
+			jdbcTemplate.update(QUERY_INVALIDATE_CLIENT_LEVEL);
 		}
-			
+		
+		success = true;
 		return success;
+	}
+	
+	public List<Transaction> searchByUser(int cid) {
+		return jdbcTemplate.query(QUERY_SELECT_TRANSACTION_BY_CLIENT_NAME, new Integer[]{cid}, new TransactionRowMapper());
 	}
 	
 }

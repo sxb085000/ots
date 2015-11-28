@@ -44,6 +44,7 @@ public class RestfulResult {
 	public void success(Object data) {
 		status = RestfulResultStatus.success;
 		setData(data);
+		getServerTime();
 	}
 	public void fail(String message) {
 		status = RestfulResultStatus.fail;

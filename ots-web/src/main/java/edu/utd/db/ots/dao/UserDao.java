@@ -1,9 +1,9 @@
 package edu.utd.db.ots.dao;
 
-import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_AUTH_PASS;
-import static edu.utd.db.ots.constant.OtsDBConstant.CLIENT_CID;
-import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT;
-import static edu.utd.db.ots.constant.OtsDBConstant.TABLE_CLIENT_AUTH;
+import static edu.utd.db.ots.constant.OTSDBConstants.CLIENT_AUTH_PASS;
+import static edu.utd.db.ots.constant.OTSDBConstants.CLIENT_CID;
+import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_CLIENT;
+import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_CLIENT_AUTH;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -90,7 +90,6 @@ public class UserDao {
 						return pstmt;
 					}
 				});
-		
 		
 		return user;
 	}
