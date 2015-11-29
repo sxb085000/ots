@@ -1,14 +1,14 @@
-	package edu.utd.db.ots.controller;
+	package edu.utd.db.ots.controller.restful;
 
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import edu.utd.db.ots.dao.TransactionDao;
 import edu.utd.db.ots.domain.Payment;
@@ -16,17 +16,25 @@ import edu.utd.db.ots.domain.RestfulResult;
 import edu.utd.db.ots.domain.Transaction;
 import edu.utd.db.ots.domain.TrxnStatus;
 
-@Controller
+@RestController
 @RequestMapping("/trxns")
-public class TransactionController {
+public class RestfulTransactionController {
 
 	@Autowired
 	private TransactionDao transactionDao;
 	
-	
-	@RequestMapping(value = "/submit")
-	public Transaction submit(@RequestBody Transaction trxn) {
-		return transactionDao.submitTransaction(trxn);
+
+	@RequestMapping(value = "/submit", method = RequestMethod.POST)
+	public @ResponseBody RestfulResult submit(@RequestBody Transaction trxn) {
+		RestfulResult result = new RestfulResult();
+		
+		try {
+			result.success(transactionDao.submitTransaction(trxn));
+		} catch (Exception e) {
+			result.error(e.getMessage());
+		}
+		
+		return result;
 	}
 	
 	@RequestMapping(value = "/{trxnId}/pay", method = RequestMethod.PUT) 
