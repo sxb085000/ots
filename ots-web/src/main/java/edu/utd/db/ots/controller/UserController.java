@@ -78,11 +78,15 @@ public class UserController {
 	}
 	
 	@RequestMapping(value = "search", method = RequestMethod.GET)
-	public @ResponseBody RestfulResult searchForUsers(@RequestParam(name = "fn") String firstName, @RequestParam(name = "ln") String lastName,
-			@RequestParam(name = "addr") String address, @RequestParam(name = "phone") String phoneNumber) {
+	public @ResponseBody RestfulResult searchForUsers(@RequestParam(name = "fn") String fname, @RequestParam(name = "ln") String lname,
+			@RequestParam(name = "addr") String addr, @RequestParam(name = "phone") String phone) {
 		RestfulResult result = new RestfulResult();
 		
-		//TODO: implement this
+		try {
+			result.success(userDao.searchUser(fname, lname, addr, phone));
+		} catch (Exception e) {
+			result.error(e.getMessage());
+		}
 		
 		return result;
 	}

@@ -7,18 +7,14 @@ import static edu.utd.db.ots.constant.OTSDBConstants.TRANSACTION_XID;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
-import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -28,9 +24,7 @@ import edu.utd.db.ots.domain.ClientLevel;
 import edu.utd.db.ots.domain.Payment;
 import edu.utd.db.ots.domain.Transaction;
 import edu.utd.db.ots.domain.TrxnStatus;
-import edu.utd.db.ots.domain.User;
 import edu.utd.db.ots.rowmapper.TransactionRowMapper;
-import edu.utd.db.ots.rowmapper.UserRowMapper;
 
 
 @Repository

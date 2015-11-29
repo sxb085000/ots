@@ -1,14 +1,13 @@
 package edu.utd.db.ots.dao;
 
-import static edu.utd.db.ots.constant.OTSDBConstants.CLIENT_AUTH_PASS;
-import static edu.utd.db.ots.constant.OTSDBConstants.CLIENT_CID;
-import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_CLIENT;
-import static edu.utd.db.ots.constant.OTSDBConstants.TABLE_CLIENT_AUTH;
+import static edu.utd.db.ots.constant.OTSDBConstants.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -17,6 +16,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -40,6 +40,10 @@ public class UserDao {
 	public static final String QUERY_UPDATE_USER = 
 			"UDPATE user SET First_name = ?, Last_name = ?, Street_addr = ?, City = ?, State = ?, Zip = ?, Email = ?, Cell_number = ?, Ph_number = ? WHERE Cid = ?";
 	public static final String QUERY_AUTHENTICATE = "SELECT * FROM " + TABLE_CLIENT_AUTH + " WHERE " + CLIENT_CID + " = ? AND " + CLIENT_AUTH_PASS + " = ?";
+	public static final String QUERY_SELECT_USER_BY_NAME = "SELECT * FROM " + TABLE_CLIENT + " WHERE " + CLIENT_FNAME + " like ?% AND " +CLIENT_LNAME + " like ?%";
+	public static final String QUERY_SELECT_USER_BY_ADDRESS = "SELECT * FROM " + TABLE_CLIENT + " WHERE " + CLIENT_STREET_ADDR + " = ?";
+	public static final String QUERY_SELECT_USER_BY_PHONE = "SELECT * FROM " + TABLE_CLIENT + " WHERE " + CLIENT_PHONE_NUM+ " = ? OR " + CLIENT_CELL_NUM+ " = ?";
+	
 	
 	private JdbcTemplate jdbcTemplate;
 	@Autowired
@@ -137,6 +141,29 @@ public class UserDao {
 		}
 			
 		return success;
+	}
+	
+	public List<User> searchUser(String fname, String lname, String addr, String phone) {
+		List<User> usersFound = new ArrayList<User>();
+		
+		String query = "";
+		Object[] params = new Object[] {};
+		RowMapper<User> rowMapper = new UserRowMapper();
+		
+		if (fname != null && lname != null) {
+			query = QUERY_SELECT_USER_BY_NAME;
+			params = new Object[] {fname, lname};
+		} else if (addr != null) {
+			query = QUERY_SELECT_USER_BY_ADDRESS;
+			params = new Object[] {addr};
+		} else if (phone != null) {
+			query = QUERY_SELECT_USER_BY_PHONE;
+			params = new Object[] {phone};
+		}
+		
+		usersFound = jdbcTemplate.query(query, params, rowMapper);
+
+		return usersFound;
 	}
 	
 }
